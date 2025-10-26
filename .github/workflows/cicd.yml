@@ -27,6 +27,6 @@ jobs:
       - name: Pull the Docker Image
         run: docker pull mohnb33/manager:latest
       - name: Delete Old Container
-        run: docker rm -f manager-container
+        run: docker rm -f manager-container || true
       - name: Run the Docker Container
         run: docker run -d -p 5173:80 --name manager-container mohnb33/manager:latest
