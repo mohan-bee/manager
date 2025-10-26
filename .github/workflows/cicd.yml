@@ -1,4 +1,4 @@
-name: Deply to Production
+name: Deploy to Production
 
 on: 
   push:
@@ -12,21 +12,40 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
+    # 🌟 CRUCIAL FIX 1: Set up QEMU and Buildx for multi-architecture support
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
     - name: Sign in to Docker Hub
       run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      
     - name: Build Docker Image
-      run: docker build -t mohnb33/manager:latest ./app
+      # 🌟 CRUCIAL FIX 2: Use --platform to target the ARM64 runner
+      run: docker build --platform linux/arm64 -t mohnb33/manager:latest ./app
+      
     - name: Push Docker Image
       run: docker push mohnb33/manager:latest 
 
   deploys: 
     needs: build
+    # Using the correct, specific labels for your runner
     runs-on: [self-hosted, Linux, ARM64]
 
     steps:  
       - name: Pull the Docker Image
         run: docker pull mohnb33/manager:latest
+        
       - name: Delete Old Container
-        run: docker rm -f manager-container || true
+        # The || true ensures the job doesn't fail if the container doesn't exist
+        run: docker rm -f manager-container || true 
+        
       - name: Run the Docker Container
         run: docker run -d -p 5173:80 --name manager-container mohnb33/manager:latest
+
+      - name: Verify New Container is Running
+        # Add a verification step to confirm it's running after the final step
+        run: docker ps | grep manager-container
